@@ -21,11 +21,6 @@ fastapi==0.115.12
 filetype==1.2.0
 frozenlist==1.6.0
 fsspec==2025.3.2
-google-api-core==2.24.2
-google-api-python-client==2.167.0
-google-auth==2.39.0
-google-auth-httplib2==0.2.0
-google-generativeai==0.8.5
 googleapis-common-protos==1.70.0
 greenlet==3.2.0
 griffe==1.7.2
