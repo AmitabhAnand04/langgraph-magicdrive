@@ -67,7 +67,6 @@ pydantic_core
 pyodbc
 pyparsing
 pypdf
-python-dateutil.post0
 python-dotenv
 pytz
 PyYAML
