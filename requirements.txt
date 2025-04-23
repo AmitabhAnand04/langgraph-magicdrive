@@ -23,7 +23,6 @@ frozenlist
 fsspec
 googleapis-common-protos
 greenlet
-griffe
 grpciorc1
 grpcio-status
 h11
