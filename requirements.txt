@@ -8,3 +8,5 @@ llama-index-embeddings-gemini
 SQLAlchemy
 python-dotenv
 fastapi
+uvicorn
+pyodbc
