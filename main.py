@@ -21,14 +21,16 @@
 #     import uvicorn
 #     uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
 
+import pprint
 from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage
 from graph import react_graph
 from uuid import uuid4
 
 app = FastAPI()
 
-@app.get("/query")
+@app.get("/api/query")
 def query(user_query: str = Query(...), thread_id: str | None = Query(None)):
     try:
         current_thread_id = thread_id or str(uuid4())
@@ -59,6 +61,44 @@ def query(user_query: str = Query(...), thread_id: str | None = Query(None)):
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/api/get-chat-history/{thread_id}")
+async def get_chat_history(thread_id: str):
+    try:
+        snapshot = react_graph.get_state({'configurable': {'thread_id': thread_id}})
+        messages = snapshot.values.get("messages", [])
+
+        formatted = []
+        for m in messages:
+            role = "unknown"
+            content = ""
+
+            if m.__class__.__name__ == "HumanMessage":
+                role = "user"
+                content = m.content
+
+            elif m.__class__.__name__ == "AIMessage":
+                role = "assistant"
+                content = m.content or ""
+
+                # If it's a tool call, add that info
+                function_call = m.additional_kwargs.get("function_call")
+                if function_call:
+                    tool_name = function_call.get("name")
+                    arguments = function_call.get("arguments")
+                    content += f"\n\n[Tool Call → `{tool_name}` with args: {arguments}]"
+
+            elif m.__class__.__name__ == "ToolMessage":
+                role = "tool"
+                content = m.content
+
+            formatted.append({"role": role, "content": content})
+
+        return {"thread_id": thread_id, "messages": formatted}
+
+    except Exception as e:
+        print("ERROR in get-chat-history:", str(e))
+        return {"error": str(e), "thread_id": thread_id}
+    
 # @app.get("/getmessages")
 # def get_messages_endpoint():
 #     """
