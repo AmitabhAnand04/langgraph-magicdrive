@@ -1,4 +1,5 @@
 
+import json
 from tools.lq_tools.run_sql import execute_query_df
 from tools.lq_tools import explain_nlq_sql_results_gemini
 import google.generativeai as genai
@@ -105,7 +106,14 @@ def nl_sql_nl_gemini(sql_prompt):
 
     # return_response = response_object(sql_string, sql_result_json, explain_result,result_list)
    
-    return explain_result
+    # return explain_result
+    result = {
+        "sql_string": sql_string,
+        "sql_result": sql_result_json,
+        "explain_result": explain_result,
+        "result_list": result_list
+    }
+    return json.dumps(result)
 
 # nl_sql_nl_gemini ("show me all logs")
 # @app.route('/nlsql/', methods=['GET', 'POST'])

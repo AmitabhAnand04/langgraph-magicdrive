@@ -20,7 +20,7 @@ def explain_result(sql_prompt, sql_result):
     if "list" in sql_prompt.lower():
         result_list = sql_result.to_json(orient='records')
         
-    print(explanation)
+    # print(explanation)
     return result_summary, result_list  
 
 

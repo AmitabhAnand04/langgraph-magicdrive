@@ -25,5 +25,5 @@ def execute_query_df(sql_in):
     with db_engine.begin() as conn:
         df = pd.read_sql(sql_in, conn)
         pd.set_option('display.max_columns', None)
-        print(f'Dataframe \n\n {df}')
+        # print(f'Dataframe \n\n {df}')
     return df
