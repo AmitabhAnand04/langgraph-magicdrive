@@ -76,7 +76,9 @@ def assistant(state: State):
     # print(messages)
     for m in messages:
         m.pretty_print()
-    return {"messages": [llm_with_tools.invoke(messages)]}
+    # return {"messages": [llm_with_tools.invoke(messages)]}
+    return {"messages": state["messages"] + [llm_with_tools.invoke(messages)]}
+
 
 def summarize_conversation(state: State):
     print("Summerizing node started!!")
@@ -99,9 +101,18 @@ def summarize_conversation(state: State):
     messages = state["messages"] + [HumanMessage(content=summary_message)]
     response = llm.invoke(messages)
     
-    # Delete all but the 2 most recent messages
-    delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-4]]
-    return {"summary": response.content, "messages": delete_messages}
+    # # Delete all but the 2 most recent messages
+    # delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-4]]
+    # return {"summary": response.content, "messages": delete_messages}
+    # Keep last N messages (actual conversation), remove older ones
+    recent_messages = state["messages"][-actual_conv_len:]
+    delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-actual_conv_len]]
+
+    return {
+        "summary": response.content,
+        "messages": delete_messages + recent_messages
+    }
+
 
 # Determine whether to end or summarize the conversation
 def should_continue(state: State):
