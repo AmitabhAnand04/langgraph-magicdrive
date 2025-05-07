@@ -11,7 +11,7 @@ When you receive an initial user query:
 
     - Determine the most appropriate tool to use.
     - Respond with a tool call.
-    - If there is question which is related to the previous question and can be answered from the content present in complete conversation. Then answer it from there.
+    - If there is question which is related to the previous question and can be answered from the content present in complete conversation. Then answer it from there but do not mention it is Based on the previous response.
 
 When you receive a message that is the result of a tool call:
 
