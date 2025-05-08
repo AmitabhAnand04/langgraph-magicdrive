@@ -95,31 +95,87 @@ def assistant(state: State):
     return {"messages": state["messages"] + [llm_with_tools.invoke(messages)]}
 
 
+# def summarize_conversation(state: State):
+#     print("Summerizing node started!!")
+#     # First, we get any existing summary
+#     summary = state.get("summary", "")
+
+#     # Create our summarization prompt 
+#     if summary:
+        
+#         # A summary already exists
+#         summary_message = (
+#             f"This is summary of the conversation to date: {summary}\n\n"
+#             "Extend the summary by taking into account the new messages above:"
+#         )
+        
+#     else:
+#         summary_message = "Create a summary of the conversation above:"
+
+#     # Only summarize if there's enough actual content
+#     if len(state["messages"]) >= 1:
+#         messages = state["messages"] + [HumanMessage(content=summary_message)]
+#         response = llm.invoke(messages)
+
+#         recent_messages = state["messages"][-actual_conv_len:]
+#         delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-actual_conv_len]]
+
+#         return {
+#             "summary": response.content,
+#             "messages": delete_messages + recent_messages
+#         }
+#     else:
+#         print("No messages to summarize")
+#         return {
+#             "summary": summary,  # keep the old one
+#             "messages": state["messages"]  # do not change anything
+#         }
+
+
+#     # # Add prompt to our history
+#     # messages = state["messages"] + [HumanMessage(content=summary_message)]
+#     # response = llm.invoke(messages)
+    
+#     # # # Delete all but the 2 most recent messages
+#     # # delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-4]]
+#     # # return {"summary": response.content, "messages": delete_messages}
+#     # # Keep last N messages (actual conversation), remove older ones
+#     # recent_messages = state["messages"][-actual_conv_len:]
+#     # delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-actual_conv_len]]
+
+#     # return {
+#     #     "summary": response.content,
+#     #     "messages": delete_messages + recent_messages
+#     # }
+
 def summarize_conversation(state: State):
-    print("Summerizing node started!!")
-    # First, we get any existing summary
+    print("Summarizing node started!!")
+
+    # Fetch existing summary if any
     summary = state.get("summary", "")
 
-    # Create our summarization prompt 
+    # Build summarization prompt
     if summary:
-        
-        # A summary already exists
         summary_message = (
-            f"This is summary of the conversation to date: {summary}\n\n"
+            f"This is a summary of the conversation so far: {summary}\n\n"
             "Extend the summary by taking into account the new messages above:"
         )
-        
     else:
         summary_message = "Create a summary of the conversation above:"
 
-    # Add prompt to our history
-    messages = state["messages"] + [HumanMessage(content=summary_message)]
+    # Filter out messages that don't have content (e.g., tool calls)
+    valid_messages = [
+        m for m in state.get("messages", [])
+        if hasattr(m, "content") and m.content and m.content.strip()
+    ]
+
+    # Append the summarization prompt
+    messages = valid_messages + [HumanMessage(content=summary_message)]
+
+    # Call the LLM to get the updated summary
     response = llm.invoke(messages)
-    
-    # # Delete all but the 2 most recent messages
-    # delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-4]]
-    # return {"summary": response.content, "messages": delete_messages}
-    # Keep last N messages (actual conversation), remove older ones
+
+    # Decide how many messages to retain (actual_conv_len must be defined globally or passed)
     recent_messages = state["messages"][-actual_conv_len:]
     delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-actual_conv_len]]
 
@@ -127,7 +183,6 @@ def summarize_conversation(state: State):
         "summary": response.content,
         "messages": delete_messages + recent_messages
     }
-
 
 # Determine whether to end or summarize the conversation
 def should_continue(state: State):
