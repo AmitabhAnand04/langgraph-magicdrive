@@ -1,8 +1,11 @@
 import json
+import os
+import sqlite3
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import MessagesState
 from langchain_core.messages import HumanMessage, SystemMessage, RemoveMessage
-from langgraph.checkpoint.memory import MemorySaver
+# from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import tools_condition
 from langgraph.prebuilt import ToolNode
@@ -12,6 +15,18 @@ from tools.tkt_tool import create_zoho_ticket
 from prompts import AGENT_PROMPT
 
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
+
+# Define path depending on environment
+if os.getenv("WEBSITE_SITE_NAME"):
+    # Running on Azure Web App
+    db_path = "/home/chat_memory.db"
+else:
+    # Running locally
+    db_path = "chat_memory.db"
+    
+print(f"DB Path = {db_path}")
+conn = sqlite3.connect(db_path, check_same_thread=False)
+
 conv_len = 4
 actual_conv_len = conv_len * 4
 def kb_tool(query: str) -> dict:
@@ -128,26 +143,6 @@ def should_continue(state: State):
     # Otherwise we can just end
     return END
 
-# def tool_routing_condition(state: State) -> str:
-#     """Route based on tool_name in tool output."""
-#     messages = state.get("messages", [])
-#     if not messages:
-#         return "assistant"  # fallback
-    
-#     last_message = messages[-1]
-#     tool_result = getattr(last_message, "content", "")
-#     logging.info(tool_result)
-#     if isinstance(tool_result, dict):
-#         tool_name = tool_result.get("tool_name", "")
-#     elif isinstance(tool_result, str):
-#         # You can use heuristics if your tool returns plain text
-#         tool_name = "unknown"
-#     else:
-#         tool_name = getattr(tool_result, "tool_name", "unknown")
-
-#     if tool_name == "lq_tool":
-#         return END
-#     return "assistant"
 def tool_routing_condition(state: State) -> str:
     """Route based on tool_name in tool output."""
     messages = state.get("messages", [])
@@ -193,7 +188,8 @@ builder.add_conditional_edges("tools", tool_routing_condition)
 builder.add_conditional_edges("assistant", should_continue)
 builder.add_edge("summarize_conversation", END)
 # builder.add_edge("tools", END)
-memory = MemorySaver()
+# memory = MemorySaver()
+memory = SqliteSaver(conn)
 react_graph = builder.compile(checkpointer=memory)
 
 # def msglen(state = messagestate) -> int:
