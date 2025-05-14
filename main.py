@@ -2,6 +2,7 @@ import os
 import json
 import pprint
 import re
+from typing import List
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -92,44 +93,92 @@ def query(user_query: str = Query(...), thread_id: str | None = Query(None)):
     except Exception as e:
         return {"error": str(e)}
 
-class InputData(BaseModel):
-    thread_id: str
-    source_id: str
+# class InputData(BaseModel):
+#     thread_id: str
+#     source_id: str
+
+# # @app.post("/api/sendchat")
+# def send_chat_history_to_chatwoot(data: InputData):
+#     try:
+#         snapshot = react_graph.get_state({'configurable': {'thread_id': data.thread_id}})
+#         messages = snapshot.values.get("messages", [])
+
+#         if not messages:
+#             return {"message": "No history to send in the given thread_id."}
+
+#         # Format messages
+#         formatted = []
+#         for m in messages:
+#             role = "unknown"
+#             content = ""
+
+#             if m.__class__.__name__ == "HumanMessage":
+#                 role = "user"
+#                 content = m.content
+#             elif m.__class__.__name__ == "AIMessage":
+#                 role = "assistant"
+#                 content = m.content or ""
+#                 function_call = m.additional_kwargs.get("function_call")
+#                 if function_call:
+#                     tool_name = function_call.get("name")
+#                     arguments = function_call.get("arguments")
+#                     content += f"\n\n[Tool Call → `{tool_name}` with args: {arguments}]"
+#             elif m.__class__.__name__ == "ToolMessage":
+#                 role = "tool"
+#                 content = m.content
+
+#             formatted.append(f"{role}: {content}")
+
+#         final_string = "\n\n".join(formatted)
+
+#         # Step 1: Find matching conversation by source_id
+#         headers = {'api_access_token': CHATWOOT_API_TOKEN}
+#         response = requests.get(CONVERSATIONS_URL, headers=headers)
+#         response_data = response.json()
+
+#         conversation_id = None
+#         payloads = response_data.get("data", {}).get("payload", [])
+#         for item in payloads:
+#             msgs = item.get("messages", [])
+#             if msgs:
+#                 msg = msgs[0]
+#                 src_id = msg.get("conversation", {}).get("contact_inbox", {}).get("source_id")
+#                 if src_id == data.source_id:
+#                     conversation_id = msg.get("conversation_id")
+#                     break
+
+#         if not conversation_id:
+#             return {"message": "No matching source_id found."}
+
+#         # Step 2: Post the formatted chat history to Chatwoot
+#         message_url = MESSAGES_URL_TEMPLATE.format(conversation_id=conversation_id)
+#         message_payload = json.dumps({
+#             "content": final_string,
+#             "private": True
+#         })
+#         message_headers = {
+#             'api_access_token': CHATWOOT_API_TOKEN,
+#             'Content-Type': 'application/json'
+#         }
+
+#         msg_response = requests.post(message_url, headers=message_headers, data=message_payload)
+#         return {
+#             "thread_id": data.thread_id,
+#             "conversation_id": conversation_id,
+#             "message_sent": final_string,
+#             "message":"Messages sent to chatwoot!!"
+#         }
+    
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e)) 
+
+class ChatEntry(BaseModel):
+    user: str
+    assistant: str
 
 @app.post("/api/sendchat")
-def send_chat_history_to_chatwoot(data: InputData):
+def send_chat_history_to_chatwoot(source_id: str = Query(...), body: List[ChatEntry] = []):
     try:
-        snapshot = react_graph.get_state({'configurable': {'thread_id': data.thread_id}})
-        messages = snapshot.values.get("messages", [])
-
-        if not messages:
-            return {"message": "No history to send in the given thread_id."}
-
-        # Format messages
-        formatted = []
-        for m in messages:
-            role = "unknown"
-            content = ""
-
-            if m.__class__.__name__ == "HumanMessage":
-                role = "user"
-                content = m.content
-            elif m.__class__.__name__ == "AIMessage":
-                role = "assistant"
-                content = m.content or ""
-                function_call = m.additional_kwargs.get("function_call")
-                if function_call:
-                    tool_name = function_call.get("name")
-                    arguments = function_call.get("arguments")
-                    content += f"\n\n[Tool Call → `{tool_name}` with args: {arguments}]"
-            elif m.__class__.__name__ == "ToolMessage":
-                role = "tool"
-                content = m.content
-
-            formatted.append(f"{role}: {content}")
-
-        final_string = "\n\n".join(formatted)
-
         # Step 1: Find matching conversation by source_id
         headers = {'api_access_token': CHATWOOT_API_TOKEN}
         response = requests.get(CONVERSATIONS_URL, headers=headers)
@@ -142,35 +191,60 @@ def send_chat_history_to_chatwoot(data: InputData):
             if msgs:
                 msg = msgs[0]
                 src_id = msg.get("conversation", {}).get("contact_inbox", {}).get("source_id")
-                if src_id == data.source_id:
+                if src_id == source_id:
                     conversation_id = msg.get("conversation_id")
                     break
 
         if not conversation_id:
             return {"message": "No matching source_id found."}
 
-        # Step 2: Post the formatted chat history to Chatwoot
+        # Step 2: Post each message to Chatwoot individually
         message_url = MESSAGES_URL_TEMPLATE.format(conversation_id=conversation_id)
-        message_payload = json.dumps({
-            "content": final_string,
-            "private": True
-        })
         message_headers = {
             'api_access_token': CHATWOOT_API_TOKEN,
             'Content-Type': 'application/json'
         }
 
-        msg_response = requests.post(message_url, headers=message_headers, data=message_payload)
-        return {
-            "thread_id": data.thread_id,
-            "conversation_id": conversation_id,
-            "message_sent": final_string,
-            "message":"Messages sent to chatwoot!!"
-        }
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        sent_messages = []
 
+        for entry in body:
+            # Send user message (incoming)
+            if entry.user:
+                user_payload = {
+                    "content": "User:\n" + entry.user,
+                    "message_type": "outgoing"
+                }
+                resp_user = requests.post(message_url, headers=message_headers, data=json.dumps(user_payload))
+                sent_messages.append({
+                    "type": "user",
+                    "content": entry.user,
+                    "status": resp_user.status_code,
+                    "response": resp_user.json()
+                })
+
+            # Send assistant message (outgoing)
+            if entry.assistant:
+                assistant_payload = {
+                    "content": "Assistant:\n" + entry.assistant,
+                    "message_type": "outgoing"
+                }
+                resp_assistant = requests.post(message_url, headers=message_headers, data=json.dumps(assistant_payload))
+                sent_messages.append({
+                    "type": "assistant",
+                    "content": entry.assistant,
+                    "status": resp_assistant.status_code,
+                    "response": resp_assistant.json()
+                })
+
+        return {
+            "conversation_id": conversation_id,
+            "message": "Messages sent to Chatwoot!",
+            "details": sent_messages
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
