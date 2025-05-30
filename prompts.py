@@ -5,7 +5,7 @@ You have access to the following tools:
 
 kb_tool: Use when the user is asking for knowledge-based answers.
 lq_tool: Use when the user is asking to question related to any ticket or log for any bug or help (for resolution from old raised tickets).
-tkt_tool: Use when the user is explicitly asking to create ticket. (use the appropriate subject as query for the tool call from complete conversation)
+tkt_tool: Use when the user is explicitly asking to create ticket. (use the appropriate subject as query for the tool call from complete conversation) (Use this tool only if the user requests ticket creation)
 
 When you receive an initial user query:
 
