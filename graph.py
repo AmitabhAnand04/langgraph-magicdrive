@@ -15,7 +15,7 @@ from tools.lq_tool import get_lq_response
 from tools.tkt_tool import create_zoho_ticket
 from prompts import AGENT_PROMPT
 
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 
 # Define path depending on environment
 if os.getenv("WEBSITE_SITE_NAME"):
@@ -71,12 +71,12 @@ sys_msg = SystemMessage(
 )
 # Node
 def assistant(state: State):
-    print("Assistant node started!!")
+    # print("Assistant node started!!")
     # for m in state['messages']:
     #     m.pretty_print()
     # Get summary if it exists
     messages = [sys_msg] + state["messages"]
-    print(state["messages"])
+    # print(state["messages"])
     # for m in messages:
     #     m.pretty_print()
     # return {"messages": [llm_with_tools.invoke(messages)]}

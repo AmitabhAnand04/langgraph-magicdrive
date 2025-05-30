@@ -18,23 +18,23 @@ data_dir = os.path.join(current_dir, "data")
 safety_settings = [
     {
         "category": "HARM_CATEGORY_DANGEROUS",
-        "threshold": "BLOCK_NONE",
+        "threshold": "BLOCK_LOW_AND_ABOVE",
     },
     {
         "category": "HARM_CATEGORY_HARASSMENT",
-        "threshold": "BLOCK_NONE",
+        "threshold": "BLOCK_LOW_AND_ABOVE",
     },
     {
         "category": "HARM_CATEGORY_HATE_SPEECH",
-        "threshold": "BLOCK_NONE",
+        "threshold": "BLOCK_LOW_AND_ABOVE",
     },
     {
         "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-        "threshold": "BLOCK_NONE",
+        "threshold": "BLOCK_LOW_AND_ABOVE",
     },
     {
         "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-        "threshold": "BLOCK_NONE",
+        "threshold": "BLOCK_LOW_AND_ABOVE",
     },
 ]
 
@@ -42,7 +42,7 @@ Settings.embed_model = GeminiEmbedding(
     model_name="models/embedding-001", api_key=api_key
 )
 
-Settings.llm = Gemini(model_name="models/gemini-1.5-pro", api_key=api_key,safety_settings=safety_settings, temperature=0)
+Settings.llm = Gemini(model_name="models/gemini-2.0-flash", api_key=api_key,safety_settings=safety_settings, temperature=0)
 
 
 if not os.path.exists(index_storage_dir):
