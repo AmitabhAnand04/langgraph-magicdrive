@@ -10,7 +10,8 @@ from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import tools_condition
 from langgraph.prebuilt import ToolNode
 from tools.kb_tools.kb_tool import chat_engine
-from tools.lq_tools.lq_tool import nl_sql_nl_gemini
+# from tools.lq_tools.lq_tool import nl_sql_nl_gemini
+from tools.lq_tool import get_lq_response
 from tools.tkt_tool import create_zoho_ticket
 from prompts import AGENT_PROMPT
 
@@ -38,20 +39,20 @@ def kb_tool(query: str) -> dict:
     }
 
 def lq_tool(query: str) -> dict:
-    """answer for database query related questions.
+    """answers resolutions from previously created similar ticket.
 
     Args:
         query: user query
     """
     # return f"[LQ Tool] SQL executed for: {query}"
-    result =  nl_sql_nl_gemini (query)
+    result =  get_lq_response (query)
     return {
         "tool_name": "lq_tool",
         "content": result
     }
 
 def tkt_tool(query: str) -> dict:
-    """Answer for knowledge-based questions."""
+    """For creating a new ticket"""
     result =  create_zoho_ticket(query)
     return {
         "tool_name": "tkt_tool",
@@ -61,8 +62,7 @@ def tkt_tool(query: str) -> dict:
 tools = [kb_tool, lq_tool, tkt_tool]
 llm_with_tools = llm.bind_tools(tools)
 
-class State(MessagesState):
-    summary: str
+State = MessagesState
 
 # System message
 # sys_msg = SystemMessage(content="You are a helpful assistant whic will decide which tool to use for the user provided query.")
@@ -75,22 +75,10 @@ def assistant(state: State):
     # for m in state['messages']:
     #     m.pretty_print()
     # Get summary if it exists
-    summary = state.get("summary", "")
-
-    # If there is summary, then we add it
-    if summary:
-        
-        # Add summary to system message
-        summary_message = f"Summary of conversation earlier: {summary}"
-
-        # Append summary to any newer messages
-        messages = [sys_msg] + [SystemMessage(content=summary_message)] + state["messages"]
-    
-    else:
-        messages = [sys_msg] + state["messages"]
-    # print(messages)
-    for m in messages:
-        m.pretty_print()
+    messages = [sys_msg] + state["messages"]
+    print(state["messages"])
+    # for m in messages:
+    #     m.pretty_print()
     # return {"messages": [llm_with_tools.invoke(messages)]}
     return {"messages": state["messages"] + [llm_with_tools.invoke(messages)]}
 
@@ -148,79 +136,79 @@ def assistant(state: State):
 #     #     "messages": delete_messages + recent_messages
 #     # }
 
-def summarize_conversation(state: State):
-    print("Summarizing node started!!")
+# def summarize_conversation(state: State):
+#     print("Summarizing node started!!")
 
-    # Fetch existing summary if any
-    summary = state.get("summary", "")
+#     # Fetch existing summary if any
+#     summary = state.get("summary", "")
 
-    # Build summarization prompt
-    if summary:
-        summary_message = (
-            f"This is a summary of the conversation so far: {summary}\n\n"
-            "Extend the summary by taking into account the new messages above:"
-        )
-    else:
-        summary_message = "Create a summary of the conversation above:"
+#     # Build summarization prompt
+#     if summary:
+#         summary_message = (
+#             f"This is a summary of the conversation so far: {summary}\n\n"
+#             "Extend the summary by taking into account the new messages above:"
+#         )
+#     else:
+#         summary_message = "Create a summary of the conversation above:"
 
-    # Filter out messages that don't have content (e.g., tool calls)
-    valid_messages = [
-        m for m in state.get("messages", [])
-        if hasattr(m, "content") and m.content and m.content.strip()
-    ]
+#     # Filter out messages that don't have content (e.g., tool calls)
+#     valid_messages = [
+#         m for m in state.get("messages", [])
+#         if hasattr(m, "content") and m.content and m.content.strip()
+#     ]
 
-    # Append the summarization prompt
-    messages = valid_messages + [HumanMessage(content=summary_message)]
+#     # Append the summarization prompt
+#     messages = valid_messages + [HumanMessage(content=summary_message)]
 
-    # Call the LLM to get the updated summary
-    response = llm.invoke(messages)
+#     # Call the LLM to get the updated summary
+#     response = llm.invoke(messages)
 
-    # Decide how many messages to retain (actual_conv_len must be defined globally or passed)
-    recent_messages = state["messages"][-actual_conv_len:]
-    delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-actual_conv_len]]
+#     # Decide how many messages to retain (actual_conv_len must be defined globally or passed)
+#     recent_messages = state["messages"][-actual_conv_len:]
+#     delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-actual_conv_len]]
 
-    return {
-        "summary": response.content,
-        "messages": delete_messages + recent_messages
-    }
+#     return {
+#         "summary": response.content,
+#         "messages": delete_messages + recent_messages
+#     }
 
-# Determine whether to end or summarize the conversation
-def should_continue(state: State):
+# # Determine whether to end or summarize the conversation
+# def should_continue(state: State):
     
-    """Return the next node to execute."""
+#     """Return the next node to execute."""
     
-    messages = state["messages"]
+#     messages = state["messages"]
     
-    # If there are more than six messages, then we summarize the conversation
-    if len(messages) > actual_conv_len:
-        return "summarize_conversation"
+#     # If there are more than six messages, then we summarize the conversation
+#     if len(messages) > actual_conv_len:
+#         return "summarize_conversation"
     
-    # Otherwise we can just end
-    return END
+#     # Otherwise we can just end
+#     return END
 
-def tool_routing_condition(state: State) -> str:
-    """Route based on tool_name in tool output."""
-    messages = state.get("messages", [])
-    if not messages:
-        return "assistant"  # fallback
+# def tool_routing_condition(state: State) -> str:
+#     """Route based on tool_name in tool output."""
+#     messages = state.get("messages", [])
+#     if not messages:
+#         return "assistant"  # fallback
     
-    last_message = messages[-1]
-    tool_result = getattr(last_message, "content", "")
+#     last_message = messages[-1]
+#     tool_result = getattr(last_message, "content", "")
 
-    if isinstance(tool_result, str):
-        try:
-            tool_result = json.loads(tool_result)
-        except json.JSONDecodeError:
-            pass  # leave as string if it's not valid JSON
+#     if isinstance(tool_result, str):
+#         try:
+#             tool_result = json.loads(tool_result)
+#         except json.JSONDecodeError:
+#             pass  # leave as string if it's not valid JSON
 
-    if isinstance(tool_result, dict):
-        tool_name = tool_result.get("tool_name", "")
-    else:
-        tool_name = getattr(tool_result, "tool_name", "unknown")
+#     if isinstance(tool_result, dict):
+#         tool_name = tool_result.get("tool_name", "")
+#     else:
+#         tool_name = getattr(tool_result, "tool_name", "unknown")
 
-    if tool_name == "lq_tool":
-        return END
-    return "assistant"
+#     if tool_name == "lq_tool":
+#         return END
+#     return "assistant"
 
 # Graph
 builder = StateGraph(State)
@@ -228,7 +216,7 @@ builder = StateGraph(State)
 # Define nodes: these do the work
 builder.add_node("assistant", assistant)
 builder.add_node("tools", ToolNode(tools))
-builder.add_node(summarize_conversation)
+# builder.add_node(summarize_conversation)
 
 # Define edges: these determine how the control flow moves
 builder.add_edge(START, "assistant")
@@ -239,9 +227,10 @@ builder.add_conditional_edges(
     tools_condition,
 )
 # builder.add_edge("tools", "assistant")
-builder.add_conditional_edges("tools", tool_routing_condition)
-builder.add_conditional_edges("assistant", should_continue)
-builder.add_edge("summarize_conversation", END)
+builder.add_edge("tools", "assistant")
+builder.add_edge("assistant", END)
+# builder.add_conditional_edges("assistant", should_continue)
+# builder.add_edge("summarize_conversation", END)
 # builder.add_edge("tools", END)
 # memory = MemorySaver()
 memory = SqliteSaver(conn)

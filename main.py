@@ -26,6 +26,10 @@ app.add_middleware(
     allow_headers=["*"],  # Or specify: ["Content-Type", "Authorization"]
 )
 
+def langsmith_config():
+    os.environ['LANGSMITH_TRACING']='true'
+    os.environ['LANGSMITH_API_KEY']=os.getenv("LANGSMITH_API_KEY")
+    os.environ['LANGSMITH_PROJECT']=os.getenv("LANGSMITH_PROJECT")
 # Constants from environment
 CHATWOOT_API_TOKEN = os.getenv("CHATWOOT_API_TOKEN")
 
@@ -92,85 +96,6 @@ def query(user_query: str = Query(...), thread_id: str | None = Query(None)):
         return response_data
     except Exception as e:
         return {"error": str(e)}
-
-# class InputData(BaseModel):
-#     thread_id: str
-#     source_id: str
-
-# # @app.post("/api/sendchat")
-# def send_chat_history_to_chatwoot(data: InputData):
-#     try:
-#         snapshot = react_graph.get_state({'configurable': {'thread_id': data.thread_id}})
-#         messages = snapshot.values.get("messages", [])
-
-#         if not messages:
-#             return {"message": "No history to send in the given thread_id."}
-
-#         # Format messages
-#         formatted = []
-#         for m in messages:
-#             role = "unknown"
-#             content = ""
-
-#             if m.__class__.__name__ == "HumanMessage":
-#                 role = "user"
-#                 content = m.content
-#             elif m.__class__.__name__ == "AIMessage":
-#                 role = "assistant"
-#                 content = m.content or ""
-#                 function_call = m.additional_kwargs.get("function_call")
-#                 if function_call:
-#                     tool_name = function_call.get("name")
-#                     arguments = function_call.get("arguments")
-#                     content += f"\n\n[Tool Call → `{tool_name}` with args: {arguments}]"
-#             elif m.__class__.__name__ == "ToolMessage":
-#                 role = "tool"
-#                 content = m.content
-
-#             formatted.append(f"{role}: {content}")
-
-#         final_string = "\n\n".join(formatted)
-
-#         # Step 1: Find matching conversation by source_id
-#         headers = {'api_access_token': CHATWOOT_API_TOKEN}
-#         response = requests.get(CONVERSATIONS_URL, headers=headers)
-#         response_data = response.json()
-
-#         conversation_id = None
-#         payloads = response_data.get("data", {}).get("payload", [])
-#         for item in payloads:
-#             msgs = item.get("messages", [])
-#             if msgs:
-#                 msg = msgs[0]
-#                 src_id = msg.get("conversation", {}).get("contact_inbox", {}).get("source_id")
-#                 if src_id == data.source_id:
-#                     conversation_id = msg.get("conversation_id")
-#                     break
-
-#         if not conversation_id:
-#             return {"message": "No matching source_id found."}
-
-#         # Step 2: Post the formatted chat history to Chatwoot
-#         message_url = MESSAGES_URL_TEMPLATE.format(conversation_id=conversation_id)
-#         message_payload = json.dumps({
-#             "content": final_string,
-#             "private": True
-#         })
-#         message_headers = {
-#             'api_access_token': CHATWOOT_API_TOKEN,
-#             'Content-Type': 'application/json'
-#         }
-
-#         msg_response = requests.post(message_url, headers=message_headers, data=message_payload)
-#         return {
-#             "thread_id": data.thread_id,
-#             "conversation_id": conversation_id,
-#             "message_sent": final_string,
-#             "message":"Messages sent to chatwoot!!"
-#         }
-    
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e)) 
 
 class ChatEntry(BaseModel):
     user: str
@@ -247,4 +172,5 @@ def send_chat_history_to_chatwoot(source_id: str = Query(...), body: List[ChatEn
     
 if __name__ == "__main__":
     import uvicorn
+    langsmith_config()
     uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
