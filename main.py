@@ -54,34 +54,9 @@ def query(user_query: str = Query(...), thread_id: str | None = Query(None)):
             last_message = messages[-1]
             # logging.info(last_message)
             content = getattr(last_message, "content", "")
-            # logging.info(content)
-            # Check if content looks like a JSON string
-            if isinstance(content, str):
-                try:
-                    # First decode the main content
-                    tool_result = json.loads(content)
-
-                    # Now decode the inner 'content' field if it's a string
-                    if isinstance(tool_result.get("content"), str):
-                        try:
-                            tool_result["content"] = json.loads(tool_result["content"])
-
-                            # Now decode the 'sql_result' if it's a string
-                            if isinstance(tool_result["content"].get("sql_result"), str):
-                                try:
-                                    tool_result["content"]["sql_result"] = json.loads(
-                                        tool_result["content"]["sql_result"]
-                                    )
-                                except json.JSONDecodeError:
-                                    pass
-
-                        except json.JSONDecodeError:
-                            pass
-                except json.JSONDecodeError:
-                    tool_result = content
-
+            
             response_data = {
-                "result": tool_result,
+                "result": content,
                 "message_state_length": number_of_messages,
                 "all_messages_in_message_state": response["messages"],
                 "thread_id": current_thread_id
