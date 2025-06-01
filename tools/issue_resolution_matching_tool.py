@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-def get_lq_response(prompt: str):
+def get_resolution_matching_result(prompt: str):
     # Get base URL from environment variable
     base_url = os.getenv("LQ_TOOL_BASE_URL")
     if not base_url:
@@ -20,7 +20,7 @@ def get_lq_response(prompt: str):
     try:
         response = requests.get(endpoint, params=params)
         response.raise_for_status()
-        return response.json()
+        return response.json().get("response")
     except requests.exceptions.RequestException as e:
         print(f"Request failed: {e}")
         return None

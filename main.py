@@ -47,8 +47,8 @@ def query(user_query: str = Query(...), thread_id: str | None = Query(None)):
         response = react_graph.invoke({"messages": [human_message]}, config)
         number_of_messages = len(response['messages'])
         # Extract the content from the last message
-        for m in response['messages']:
-            m.pretty_print()
+        # for m in response['messages']:
+        #     m.pretty_print()
         if response and response.get("messages"):
             messages = response.get("messages", [])  
             last_message = messages[-1]

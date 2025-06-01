@@ -8,10 +8,10 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import tools_condition
 from langgraph.prebuilt import ToolNode
-from tools.kb_tools.kb_tool import chat_engine
-# from tools.lq_tools.lq_tool import nl_sql_nl_gemini
-from tools.lq_tool import get_lq_response
-from tools.tkt_tool import create_zoho_ticket
+from tools.feature_query_tool.feature_query_tool import chat_engine
+from tools.issue_resolution_matching_tool import get_resolution_matching_result
+from tools.issue_ticket_creation_tool import create_zoho_ticket
+from tools.issue_ticket_status_tool  import get_ticket_status
 from prompts import AGENT_PROMPT
 
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
@@ -44,21 +44,29 @@ def issue_resolution_matching_tool(query: str) -> dict:
         query: user query
     """
     # return f"[LQ Tool] SQL executed for: {query}"
-    result =  get_lq_response (query)
+    result =  get_resolution_matching_result (query)
     return {
         "tool_name": "issue_resolution_matching_tool",
         "content": result
     }
 
 def issue_ticket_creation_tool(query: str, email: str) -> dict:
-    """For creating a new ticket"""
-    result =  create_zoho_ticket(query)
+    """For creating a new Zoho Desk ticket"""
+    result =  create_zoho_ticket(query, email)
     return {
         "tool_name": "issue_ticket_creation_tool",
         "content": result
     }
 
-tools = [feature_query_tool, issue_resolution_matching_tool, issue_ticket_creation_tool]
+def issue_ticket_status_tool(query: str, email: str) -> dict:
+    """Fetches the status of a Zoho Desk ticket using its ID and validates the email."""
+    result = get_ticket_status(query, email)
+    return {
+        "tool_name": "issue_ticket_status_tool",
+        "content": result
+    }
+
+tools = [feature_query_tool, issue_resolution_matching_tool, issue_ticket_creation_tool, issue_ticket_status_tool]
 llm_with_tools = llm.bind_tools(tools)
 
 State = MessagesState
