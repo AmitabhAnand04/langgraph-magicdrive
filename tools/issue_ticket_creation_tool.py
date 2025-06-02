@@ -46,10 +46,10 @@ def create_zoho_ticket(subject: str, email: str):
 
     ticket_data = response.json()
     ticket_id = ticket_data.get("id")
-    ticket_number = ticket_data.get("ticketNumber")
+    # ticket_number = ticket_data.get("ticketNumber")
 
     return {
-        "message": f"Ticket created for email ID {email} with ticket ID {ticket_id} and ticket number {ticket_number}."
+        "message": f"Ticket created for email ID {email} with ticket ID {ticket_id}."
     }
 
 

@@ -42,7 +42,7 @@ Settings.embed_model = GeminiEmbedding(
     model_name="models/embedding-001", api_key=api_key
 )
 
-Settings.llm = Gemini(model_name="models/gemini-2.0-flash", api_key=api_key,safety_settings=safety_settings, temperature=0)
+Settings.llm = Gemini(model_name="models/gemini-2.0-flash", api_key=api_key,safety_settings=safety_settings, temperature=1)
 
 
 if not os.path.exists(index_storage_dir):
@@ -68,7 +68,7 @@ chat_engine = index.as_chat_engine(
     system_prompt=(
         """You are a friendly chatbot, able to have normal interactions.
         You help the users with their questions. Return answers from the stored documents only.
-        Summarize the answers in less than or up to three sentences.
+        Just answer from the referred documents and do not ask for any data to process do additional processing
         Do not make up your own answers. """
     ),
 )

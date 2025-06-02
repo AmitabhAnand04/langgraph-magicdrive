@@ -42,7 +42,7 @@ When handling user input:
 
 - **When receiving a tool response**:
   - Use the response to answer the user's query.
-  - If the tool used was feature_query_tool or issue_resolution_matching_tool, append:
+  - If the tool used was issue_resolution_matching_tool, append:
 
     ---
     "Does this answer your question?  
