@@ -14,6 +14,13 @@ from uuid import uuid4
 from dotenv import load_dotenv
 
 load_dotenv()
+def langsmith_config():
+    os.environ['LANGSMITH_TRACING']='true'
+    os.environ['LANGSMITH_API_KEY']=os.getenv("LANGSMITH_API_KEY")
+    os.environ['LANGSMITH_PROJECT']=os.getenv("LANGSMITH_PROJECT")
+
+
+langsmith_config()
 
 app = FastAPI()
 
@@ -26,10 +33,6 @@ app.add_middleware(
     allow_headers=["*"],  # Or specify: ["Content-Type", "Authorization"]
 )
 
-def langsmith_config():
-    os.environ['LANGSMITH_TRACING']='true'
-    os.environ['LANGSMITH_API_KEY']=os.getenv("LANGSMITH_API_KEY")
-    os.environ['LANGSMITH_PROJECT']=os.getenv("LANGSMITH_PROJECT")
 # Constants from environment
 CHATWOOT_API_TOKEN = os.getenv("CHATWOOT_API_TOKEN")
 
@@ -147,5 +150,4 @@ def send_chat_history_to_chatwoot(source_id: str = Query(...), body: List[ChatEn
     
 if __name__ == "__main__":
     import uvicorn
-    langsmith_config()
     uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
