@@ -8,7 +8,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import tools_condition
 from langgraph.prebuilt import ToolNode
-from tools.feature_query_tool.feature_query_tool import chat_engine
+from tools.feature_query_tool.feature_query_tool import chat_engine, query_engine
 from tools.issue_resolution_matching_tool import get_resolution_matching_result
 from tools.issue_ticket_creation_tool import create_zoho_ticket
 from tools.issue_ticket_status_tool  import get_ticket_status
@@ -31,7 +31,8 @@ conv_len = 4
 actual_conv_len = conv_len * 4
 def feature_query_tool(query: str) -> dict:
     """Answer for knowledge-based questions."""
-    result =  chat_engine.chat(query).response
+    # result =  chat_engine.chat(query).response
+    result = query_engine.query(query).response
     return {
         "tool_name": "feature_query_tool",
         "content": result

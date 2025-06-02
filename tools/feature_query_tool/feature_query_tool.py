@@ -42,7 +42,7 @@ Settings.embed_model = GeminiEmbedding(
     model_name="models/embedding-001", api_key=api_key
 )
 
-Settings.llm = Gemini(model_name="models/gemini-2.0-flash", api_key=api_key,safety_settings=safety_settings, temperature=1)
+Settings.llm = Gemini(model_name="models/gemini-2.0-flash", api_key=api_key,safety_settings=safety_settings, temperature=0)
 
 
 if not os.path.exists(index_storage_dir):
@@ -72,6 +72,7 @@ chat_engine = index.as_chat_engine(
         Do not make up your own answers. """
     ),
 )
+query_engine = index.as_query_engine()
 # response = chat_engine.chat("I am unable to generate financial reports. Please help.")
 # print (response)
 # app = Flask(__name__)
