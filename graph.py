@@ -29,16 +29,17 @@ conn = sqlite3.connect(db_path, check_same_thread=False)
 
 conv_len = 4
 actual_conv_len = conv_len * 4
-def feature_query_tool(query: str) -> dict:
+def feature_query_tool(query: str) -> str:
     """Answer for knowledge-based questions."""
     # result =  chat_engine.chat(query).response
     result = query_engine.query(query).response
-    return {
-        "tool_name": "feature_query_tool",
-        "content": result
-    }
+    return result
+    # return {
+    #     "tool_name": "feature_query_tool",
+    #     "content": result
+    # }
 
-def issue_resolution_matching_tool(query: str) -> dict:
+def issue_resolution_matching_tool(query: str) -> str:
     """answers resolutions from previously created similar ticket.
 
     Args:
@@ -46,26 +47,29 @@ def issue_resolution_matching_tool(query: str) -> dict:
     """
     # return f"[LQ Tool] SQL executed for: {query}"
     result =  get_resolution_matching_result (query)
-    return {
-        "tool_name": "issue_resolution_matching_tool",
-        "content": result
-    }
+    return result
+    # return {
+    #     "tool_name": "issue_resolution_matching_tool",
+    #     "content": result
+    # }
 
-def issue_ticket_creation_tool(query: str, email: str) -> dict:
+def issue_ticket_creation_tool(query: str, email: str) -> str:
     """For creating a new Zoho Desk ticket"""
     result =  create_zoho_ticket(query, email)
-    return {
-        "tool_name": "issue_ticket_creation_tool",
-        "content": result
-    }
+    return result
+    # return {
+    #     "tool_name": "issue_ticket_creation_tool",
+    #     "content": result
+    # }
 
-def issue_ticket_status_tool(query: str, email: str) -> dict:
+def issue_ticket_status_tool(query: str, email: str) -> str:
     """Fetches the status of a Zoho Desk ticket using its ID and validates the email."""
     result = get_ticket_status(query, email)
-    return {
-        "tool_name": "issue_ticket_status_tool",
-        "content": result
-    }
+    return result
+    # return {
+    #     "tool_name": "issue_ticket_status_tool",
+    #     "content": result
+    # }
 
 tools = [feature_query_tool, issue_resolution_matching_tool, issue_ticket_creation_tool, issue_ticket_status_tool]
 llm_with_tools = llm.bind_tools(tools)
