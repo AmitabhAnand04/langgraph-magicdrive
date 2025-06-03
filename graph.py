@@ -14,7 +14,7 @@ from tools.issue_ticket_creation_tool import create_zoho_ticket
 from tools.issue_ticket_status_tool  import get_ticket_status
 from prompts import AGENT_PROMPT
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+llm = ChatGoogleGenerativeAI(model=os.getenv("GRAPH_LLM"))
 
 # Define path depending on environment
 if os.getenv("WEBSITE_SITE_NAME"):
