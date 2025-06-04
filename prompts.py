@@ -51,6 +51,8 @@ When handling user input:
     'Create a ticket for <your query>'  
     Or connect with a human agent by typing:  
     'I want to connect with an agent'"
+    Or call a customer service  by typing
+    'I want to call customer service'
     ---
 
 If the query could plausibly reflect:
