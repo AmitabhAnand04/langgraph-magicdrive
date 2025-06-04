@@ -1,4 +1,3 @@
-import json
 import os
 import sqlite3
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -8,13 +7,13 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import tools_condition
 from langgraph.prebuilt import ToolNode
-from tools.feature_query_tool.feature_query_tool import chat_engine, query_engine
-from tools.issue_resolution_matching_tool import get_resolution_matching_result
+from tools.feature_query_tool.feature_query_tool import query_engine
+from tools.issue_resolution_matching_tool.issue_resolution_matching_tool import chat_engine
 from tools.issue_ticket_creation_tool import create_zoho_ticket
 from tools.issue_ticket_status_tool  import get_ticket_status
 from prompts import AGENT_PROMPT
 
-llm = ChatGoogleGenerativeAI(model=os.getenv("GRAPH_LLM"))
+llm = ChatGoogleGenerativeAI(model=os.getenv("AGENT_LLM"))
 
 # Define path depending on environment
 if os.getenv("WEBSITE_SITE_NAME"):
@@ -46,7 +45,7 @@ def issue_resolution_matching_tool(query: str) -> str:
         query: user query
     """
     # return f"[LQ Tool] SQL executed for: {query}"
-    result =  get_resolution_matching_result (query)
+    result =  chat_engine.chat(query).response
     return result
     # return {
     #     "tool_name": "issue_resolution_matching_tool",

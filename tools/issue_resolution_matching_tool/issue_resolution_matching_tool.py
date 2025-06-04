@@ -7,11 +7,9 @@ from llama_index.core.memory import ChatMemoryBuffer
 
 
 api_key = os.getenv("GOOGLE_API_KEY")
-# index_storage_dir = "index_storage"
-# data_dir = "data"
-current_dir = os.path.dirname(os.path.abspath(__file__))  # this gives you .../tools/kb_tools
-index_storage_dir = os.path.join(current_dir, "index_storage")
-data_dir = os.path.join(current_dir, "data")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+index_storage_dir = os.path.join(current_dir, "ir_index_storage")
+data_dir = os.path.join(current_dir, "ir_data")
 safety_settings = [
     {
         "category": "HARM_CATEGORY_DANGEROUS",
@@ -59,36 +57,14 @@ print("Index loaded successfully.")
 
 memory = ChatMemoryBuffer.from_defaults(token_limit=4000)
 
-# chat_engine = index.as_chat_engine(
-#     chat_mode="context",
-#     memory=memory,
-#     system_prompt=(
-#         """You are a friendly chatbot, able to have normal interactions.
-#         You help the users with their questions. Return answers from the stored documents only.
-#         Just answer from the referred documents and do not ask for any data to process do additional processing
-#         Do not make up your own answers. """
-#     ),
-# )
-query_engine = index.as_query_engine()
-# response = chat_engine.chat("I am unable to generate financial reports. Please help.")
-# print (response)
-# app = Flask(__name__)
-# cors = CORS(app)
-# app.config['CORS_HEADERS'] = 'Content-Type'
-# app.static_folder = 'static'
-
-# @app.route("/")
-# def home():
-#     return "KB Search API "
-# @app.route("/kb")
-# @cross_origin()
-# def get_bot_response():
-#     prompt = request.args.get('prompt')
-#     response = chat_engine.chat(prompt)
-#     output_dict={"response":response.response}
-#     output_json = json.dumps(output_dict)
-#     return output_json
-
-# # driver code 
-# if __name__ == "__main__":
-#     app.run()
+chat_engine = index.as_chat_engine(
+    chat_mode="context",
+    memory=memory,
+    system_prompt=(
+    """You are a document assistant that retrieves only the 'Resolution' section from provided documents.
+    Do not return any summaries, issues, causes, or extra text.
+    Only return the resolution as it appears in the source documents, word for word.
+    If no resolution is found, reply: "No resolution found." 
+    Remember: Do not hallucinate. Follow the instructions properly. """
+)
+)
