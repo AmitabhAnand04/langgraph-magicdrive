@@ -7,8 +7,8 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import tools_condition
 from langgraph.prebuilt import ToolNode
-from tools.feature_query_tool.feature_query_tool import query_engine
-from tools.issue_resolution_matching_tool.issue_resolution_matching_tool import chat_engine
+from tools.feature_query_tool.feature_query_tool import get_feature_chat_engine
+from tools.issue_resolution_matching_tool.issue_resolution_matching_tool import get_issue_chat_engine
 from tools.issue_ticket_creation_tool import create_zoho_ticket
 from tools.issue_ticket_status_tool  import get_ticket_status
 from prompts import AGENT_PROMPT
@@ -28,29 +28,41 @@ conn = sqlite3.connect(db_path, check_same_thread=False)
 
 conv_len = 4
 actual_conv_len = conv_len * 4
+
 def feature_query_tool(query: str) -> str:
     """Answer for knowledge-based questions."""
-    # result =  chat_engine.chat(query).response
-    result = query_engine.query(query).response
-    return result
-    # return {
-    #     "tool_name": "feature_query_tool",
-    #     "content": result
-    # }
+    try:
+        query_engine = get_feature_chat_engine()
+        if query_engine is None:
+            return "Feature query engine is not available. Please upload some documents first."
+        
+        result = query_engine.query(query).response
+        return result
+    except Exception as e:
+        return f"Error processing feature query: {str(e)}"
 
-def issue_resolution_matching_tool(query: str) -> str:
-    """answers resolutions from previously created similar ticket.
 
-    Args:
-        query: user query
-    """
-    # return f"[LQ Tool] SQL executed for: {query}"
-    result =  chat_engine.chat(query).response
-    return result
+# def issue_resolution_matching_tool(query: str) -> str:
+#     """answers resolutions from previously created similar ticket.
+
+#     Args:
+#         query: user query
+#     """
+#     # return f"[LQ Tool] SQL executed for: {query}"
+#     #result =  chat_engine.chat(query).response
+#     result = get_chat_engine()
+#     return result
     # return {
     #     "tool_name": "issue_resolution_matching_tool",
     #     "content": result
     # }
+
+def issue_resolution_matching_tool(query: str) -> str:
+    """answers resolutions from previously created similar ticket."""
+    engine = get_issue_chat_engine()
+    if engine is None:
+        return "No resolution found"
+    return engine.chat(query).response
 
 def issue_ticket_creation_tool(query: str, email: str) -> str:
     """For creating a new Zoho Desk ticket"""

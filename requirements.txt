@@ -11,3 +11,6 @@ fastapi
 uvicorn
 pyodbc
 docx2txt
+llama-index-readers-azstorage-blob
+python-multipart
+python-docx

@@ -3,15 +3,18 @@ import json
 import pprint
 import re
 from typing import List
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage
 from openai import BaseModel
 import requests
+from azure.storage.blob import ContainerClient
 from graph import react_graph
 from uuid import uuid4
 from dotenv import load_dotenv
+from tools.feature_query_tool.feature_query_tool import build_index_fq
+from tools.issue_resolution_matching_tool.issue_resolution_matching_tool import build_index, delete_blob_from_azure
 
 load_dotenv()
 def langsmith_config():
@@ -40,6 +43,17 @@ CHATWOOT_API_TOKEN = os.getenv("CHATWOOT_API_TOKEN")
 CHATWOOT_BASE_URL = os.getenv("CHATWOOT_BASE_URL")
 CONVERSATIONS_URL = f"{CHATWOOT_BASE_URL}/conversations"
 MESSAGES_URL_TEMPLATE = f"{CHATWOOT_BASE_URL}/conversations/{{conversation_id}}/messages"
+
+ISSUE_UPLOADS_BLOB_PREFIX = "issue_resolution_data_uploads/"
+FEATURE_UPLOADS_BLOB_PREFIX = "feature_query_data_uploads/"
+MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100 MB max
+ALLOWED_EXTENSIONS = {".csv", ".docx"}
+
+# Azure Blob Container client (adjust your connection string and container name)
+AZURE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+CONTAINER_NAME = os.getenv("AZURE_CONTAINER_NAME")
+
+container_client = ContainerClient.from_connection_string(AZURE_CONNECTION_STRING, container_name=CONTAINER_NAME)
 
 @app.get("/api/query")
 def query(user_query: str = Query(...), thread_id: str | None = Query(None)):
@@ -148,6 +162,129 @@ def send_chat_history_to_chatwoot(source_id: str = Query(...), body: List[ChatEn
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+
+
+def secure_filename(filename: str) -> str:
+    filename = filename.strip().replace(" ", "_")
+    filename = re.sub(r'[^A-Za-z0-9_.-]', '', filename)
+    return filename
+
+
+@app.post("/upload/issue")
+async def upload_issue_file(file: UploadFile = File()):
+    filename = secure_filename(file.filename)
+    if not filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Invalid file extension. Allowed: .csv")
+
+    contents = await file.read()
+    if len(contents) > MAX_CONTENT_LENGTH:
+        raise HTTPException(status_code=400, detail="File too large. Max size is 100MB.")
+
+    blob_path = ISSUE_UPLOADS_BLOB_PREFIX + filename
+
+    try:
+        blob_client = container_client.get_blob_client(blob_path)
+        blob_client.upload_blob(contents, overwrite=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload file to Azure Blob Storage: {str(e)}")
+
+    try:
+        build_index(container_client)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rebuild index after upload: {str(e)}")
+
+    return {"message": f"Uploaded '{filename}' for issue and reindexed successfully."}
+
+@app.post("/upload/feature")
+async def upload_feature_file(file: UploadFile = File()):
+    filename = secure_filename(file.filename)
+    if not filename.endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Invalid file extension. Allowed: .docx")
+
+    contents = await file.read()
+    if len(contents) > MAX_CONTENT_LENGTH:
+        raise HTTPException(status_code=400, detail="File too large. Max size is 100MB.")
+
+    blob_path = FEATURE_UPLOADS_BLOB_PREFIX + filename
+
+    try:
+        blob_client = container_client.get_blob_client(blob_path)
+        blob_client.upload_blob(contents, overwrite=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload file to Azure Blob Storage: {str(e)}")
+
+    try:
+        build_index_fq(container_client)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rebuild index after upload: {str(e)}")
+
+    return {"message": f"Uploaded '{filename}' for feature and reindexed successfully."}
+
+@app.delete("/delete/issue")
+async def delete_issue_file(filename: str = Query()):
+    filename = secure_filename(filename)
+    if not filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Invalid file extension. Allowed: .csv")
+
+    full_blob_name = ISSUE_UPLOADS_BLOB_PREFIX + filename
+
+    try:
+        blob_client = container_client.get_blob_client(full_blob_name)
+        blob_client.delete_blob()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete blob: {str(e)}")
+
+    try:
+        build_index(container_client)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rebuild index after deletion: {str(e)}")
+
+    return {"message": f"Deleted '{filename}' for issue and reindexed successfully."}
+
+@app.delete("/delete/feature")
+async def delete_feature_file(filename: str = Query()):
+    filename = secure_filename(filename)
+    if not filename.endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Invalid file extension. Allowed: .docx")
+
+    full_blob_name = FEATURE_UPLOADS_BLOB_PREFIX + filename
+
+    try:
+        blob_client = container_client.get_blob_client(full_blob_name)
+        blob_client.delete_blob()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete blob: {str(e)}")
+
+    try:
+        build_index_fq(container_client)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rebuild index after deletion: {str(e)}")
+
+    return {"message": f"Deleted '{filename}' for feature and reindexed successfully."}
+
+@app.post("/reindex/issue")
+async def reindex_issue():
+    try:
+        result = build_index(container_client)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rebuild issue index: {str(e)}")
+
+    if not result:
+        return {"message": "No documents found for issue in Azure Blob Storage."}
+    return {"message": "Issue index rebuilt successfully."}
+
+@app.post("/reindex/feature")
+async def reindex_feature():
+    try:
+        result = build_index_fq(container_client)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rebuild feature index: {str(e)}")
+
+    if not result:
+        return {"message": "No documents found for feature in Azure Blob Storage."}
+    return {"message": "Feature index rebuilt successfully."}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
