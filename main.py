@@ -14,7 +14,7 @@ from graph import react_graph
 from uuid import uuid4
 from dotenv import load_dotenv
 from tools.feature_query_tool.feature_query_tool import build_index_fq
-from tools.issue_resolution_matching_tool.issue_resolution_matching_tool import build_index, delete_blob_from_azure
+from tools.issue_resolution_matching_tool.issue_resolution_matching_tool import build_index
 
 load_dotenv()
 def langsmith_config():
@@ -235,11 +235,17 @@ async def delete_issue_file(filename: str = Query()):
         raise HTTPException(status_code=500, detail=f"Failed to delete blob: {str(e)}")
 
     try:
-        build_index(container_client)
+        success = build_index(container_client)
+        if not success:
+            return {
+                "message": f"Deleted '{filename}' for issue. No remaining files to reindex.",
+                "index_status": "empty"
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to rebuild index after deletion: {str(e)}")
 
     return {"message": f"Deleted '{filename}' for issue and reindexed successfully."}
+
 
 @app.delete("/delete/feature")
 async def delete_feature_file(filename: str = Query()):
